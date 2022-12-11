@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html>
+<head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sample Collection Drone</title>
+<style>
+body {
+                font-family: Arial,Helvetica,sans-serif;
+                background: #181818;
+                color: #EFEFEF;
+                font-size: 16px
+            }
+button, .button {
+                display: block;
+                margin: 5px;
+                padding: 0 12px;
+                border: 0;
+                line-height: 28px;
+                cursor: pointer;
+                color: #fff;
+                background: #0000B8;
+                border-radius: 5px;
+                font-size: 16px;
+                outline: 0
+            }
+ input[type=range] {
+                -webkit-appearance: none;
+                width: 100%;
+                height: 22px;
+                background: #363636;
+                cursor: pointer;
+                margin: 0
+            }
+</style>
+</head>
+<body>
+
+<h1>DRONE INTERFACE</h1>
+
+<div style="width:35%; float:left;">
+<h3>Measurements</h3>
+<p>Date:<span id="date"></span></p>
+<label style="font-size:110%;" for="a">GPS Co-ordinates:</label>
+    <p id="gps">loading gps...</p>
+  
+
+
+    <label style="font-size:110%;" for="b">Wind Speed:</label>
+    <p id="windspeed">loading windpseed...</p>
+ 
+
+    <label style="font-size:110%;" for="c">Temperature:</label>
+    <p id="temperature">loading temp...</p>
+
+    <label style="font-size:110%;" for="d">Altitude:</label>
+    <p id="altitude">loading altitude...</p>
+
+<label style="font-size:110%;" for="e">Wind Pressure:</label>
+    <p id="pressure">loading pressure...</p>
+  
+
+</div>
+
+
+<!--<div style="float:left;width:40%;">
+<h3>System functions</h3>
+
+
+<p>
+<label>Control sample collection arm</label> 
+<button onclick="dropArm()" disabled="true" id="drop">activate arm</button>
+<button onclick="pick_up()" disabled="true" id="pick">Lift</button>
+</p>
+
+<p>Collection arm status:<span id="sampleStatus"> </span></p>
+<p>
+<label>Reset button for failed sample collection</label>
+<button onclick="reset()" disabled="true" id="res">Reset</button>
+</p>
+<p>Enable live stream
+<button onclick="sendMsg("C")" id="cam">Stream</button>
+</p>
+</div>-->
+
+<div style="float:left;">
+<p> Sample arm position:<span id="s"></s></p>
+<input onclick="getSlide()" type="range" min="1" max="90" value="1" id="range">
+<p>Sample collection status:<span id="status"></span></p>
+<button onclick="conf()" id="got" disabled="true">Confirm Sample Collection</button>
+<p>
+<label>Sample collection information</label>
+</p>
+<p>Number of samples collected:<span id="num"></span></p>
+<p>Sample location:<span id="loc"></span></p>
+<p>Altitude:<span id="altit"></span></p>
+</div>
+
+
+<script>
+var gateway = `ws://${window.location.hostname}/ws`;
+var websocket;
+window.addEventListener('load', onload);
+function onload(event)
+{
+  initWebSocket();
+  //initButton();
+}
+function initWebSocket()
+{
+  console.log('attempting to open webscoket connection…');
+  websocket = new WebSocket(gateway);
+  websocket.onopen = onOpen;
+  websocket.onclose = onClose;
+  websocket.onmessage = onMessage;
+document.getElementById("date").innerText=Date();	
+ console.log(Date());
+showPosition();
+}
+
+function onOpen(event)
+{
+
+console.log('Connection opened...');
+
+
+}
+
+function onClose(event)
+{
+console.log('websocket closed');
+}
+
+function onMessage(event)
+{
+console.log("receiving message...");
+var rx=event.data;
+console.log(event.data);
+rsjx=JSON.parse(rx);
+if(rsjx.gps!=null)
+{
+var gps_cord=rsjx.gps;
+var temp = rsjx.temperature + "'C";
+var ws = rsjx.windspeed + "Km/h";
+var wp = rsjx.pressure + "Pa";
+var alt = rsjx.altitude + "m";
+console.log(gps_cord);
+document.getElementById("gps").innerText=gps_cord;
+document.getElementById("temperature").innerText=temp;
+document.getElementById("windspeed").innerText=ws;
+document.getElementById("pressure").innerText=wp;
+document.getElementById("altitude").innerText=alt;
+//document.getElementById("altitude").innerText=alt;
+}
+else if (rsjx.message!=null)
+{
+document.getElementById("status").innerText=rsjx.message;
+}
+}
+/*function initButton()
+{
+document.getElementById('button').addEventListener('click', toggle)
+}*/
+function dropArm()
+{
+
+document.getElementById("pick").disabled=false;
+document.getElementById("drop").disabled=true;
+}
+function getSlide()
+{
+var slider = document.getElementById("range");
+var slide_old=1;
+document.getElementById("s").innerText=slider.value;
+console.log(slider.value);
+sendMsg(slider.value);
+if(slider.value>slide_old)
+{
+document.getElementById("got").disabled=false;
+}
+}
+function showPosition() {
+console.log("Getting Position");
+        
+            navigator.geolocation.getCurrentPosition(function(position) {
+                var positionInfo ="Latitude: " + position.coords.latitude + ", " + "Longitude: " + position.coords.longitude + ")";
+                document.getElementById("gps").innerText = positionInfo;
+console.log(positionInfo);
+            });
+
+    }
+function pick_up()
+{
+sendMsg("B");
+console.log("sample acquisition successful. Disabling collection");
+
+document.getElementById("res").disabled=false;
+}
+function reset()
+{
+document.getElementById("drop").disabled=false;
+}
+function sendMsg(x)
+{
+console.log('pick up data...'+x);
+var obj={};
+obj["message"]=x;
+websocket.send(JSON.stringify(obj));
+window.open("192.168.43.142", "_blank");
+}
+function conf()
+{
+sendMsg("B");
+var count=0;
+count++;
+var l = document.getElementById("gps").innerText
+document.getElementById("loc").innerText=l;
+document.getElementById("altit").innerText=document.getElementById("altitude").innerText;
+document.getElementById("num").innerText=count;
+document.getElementById("got").disabled=true;
+}
+
+</script>
+
+</body>
+</html>
